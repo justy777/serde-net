@@ -1,6 +1,6 @@
+use serde::{de, ser};
 use std::fmt::{Display, Formatter};
 use std::io;
-use serde::{de, ser};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -13,19 +13,25 @@ pub enum Error {
 }
 
 impl Error {
-    pub(crate) const fn io(err: io::Error) -> Self{
+    pub(crate) const fn io(err: io::Error) -> Self {
         Error::Io(err)
     }
 }
 
 impl ser::Error for Error {
-    fn custom<T>(msg: T) -> Self where T: Display {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display,
+    {
         Error::Message(msg.to_string())
     }
 }
 
 impl de::Error for Error {
-    fn custom<T>(msg: T) -> Self where T: Display {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display,
+    {
         Error::Message(msg.to_string())
     }
 }
