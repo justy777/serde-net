@@ -1,5 +1,6 @@
 use serde::{de, ser};
-use std::fmt::{Display, Formatter};
+use std::error;
+use std::fmt::{self, Display};
 use std::io;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -37,7 +38,7 @@ impl de::Error for Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Message(msg) => f.write_str(msg),
             Error::Io(ref err) => Display::fmt(err, f),
@@ -47,4 +48,4 @@ impl Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+impl error::Error for Error {}
