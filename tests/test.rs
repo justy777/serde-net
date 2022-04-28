@@ -1,5 +1,5 @@
 use serde::{de, ser, Deserialize, Serialize};
-use serde_net::{from_reader, to_bytes};
+use serde_net::{from_bytes, to_bytes};
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
@@ -10,7 +10,7 @@ where
     let mut bytes = to_bytes(&value).unwrap();
     assert_eq!(bytes, output);
 
-    let v: T = from_reader(&mut bytes).unwrap();
+    let v: T = from_bytes(&mut bytes).unwrap();
     assert_eq!(v, value);
 }
 

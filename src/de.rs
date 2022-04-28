@@ -11,20 +11,20 @@ pub struct Deserializer<'de, T: AsRef<[u8]>> {
 }
 
 impl<'de, T: AsRef<[u8]>> Deserializer<'de, T> {
-    pub fn from_reader(input: &'de mut T) -> Self {
+    pub fn from_bytes(input: &'de mut T) -> Self {
         let cursor = Cursor::new(input);
         Deserializer { input: cursor }
     }
 }
 
 /// # Errors
-pub fn from_reader<'a, T, U>(input: &'a mut T) -> Result<U>
+pub fn from_bytes<'a, T, D>(input: &'a mut T) -> Result<D>
 where
     T: AsRef<[u8]>,
-    U: Deserialize<'a>,
+    D: Deserialize<'a>,
 {
-    let mut deserializer = Deserializer::from_reader(input);
-    U::deserialize(&mut deserializer)
+    let mut deserializer = Deserializer::from_bytes(input);
+    D::deserialize(&mut deserializer)
 }
 
 impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de, T> {
@@ -284,7 +284,7 @@ struct LengthDefined<'a, 'de: 'a, T: AsRef<[u8]>> {
     index: u16,
 }
 
-impl<'a, 'de, T: AsRef<[u8]>> LengthDefined<'a, 'de, T> {
+impl<'de, 'a, T: AsRef<[u8]>> LengthDefined<'a, 'de, T> {
     fn new(de: &'a mut Deserializer<'de, T>, length: u16) -> Self {
         LengthDefined {
             de,
@@ -306,7 +306,7 @@ impl<'a, 'de, T: AsRef<[u8]>> LengthDefined<'a, 'de, T> {
     }
 }
 
-impl<'a, 'de, T: AsRef<[u8]>> de::SeqAccess<'de> for LengthDefined<'a, 'de, T> {
+impl<'de, 'a, T: AsRef<[u8]>> de::SeqAccess<'de> for LengthDefined<'a, 'de, T> {
     type Error = Error;
 
     fn next_element_seed<U>(&mut self, seed: U) -> Result<Option<U::Value>>
@@ -339,13 +339,13 @@ struct Enum<'a, 'de: 'a, T: AsRef<[u8]>> {
     de: &'a mut Deserializer<'de, T>,
 }
 
-impl<'a, 'de, T: AsRef<[u8]>> Enum<'a, 'de, T> {
+impl<'de, 'a, T: AsRef<[u8]>> Enum<'a, 'de, T> {
     fn new(de: &'a mut Deserializer<'de, T>) -> Self {
         Enum { de }
     }
 }
 
-impl<'a, 'de, T: AsRef<[u8]>> de::EnumAccess<'de> for Enum<'a, 'de, T> {
+impl<'de, 'a, T: AsRef<[u8]>> de::EnumAccess<'de> for Enum<'a, 'de, T> {
     type Error = Error;
     type Variant = Self;
 
@@ -359,7 +359,7 @@ impl<'a, 'de, T: AsRef<[u8]>> de::EnumAccess<'de> for Enum<'a, 'de, T> {
     }
 }
 
-impl<'a, 'de, T: AsRef<[u8]>> de::VariantAccess<'de> for Enum<'a, 'de, T> {
+impl<'de, 'a, T: AsRef<[u8]>> de::VariantAccess<'de> for Enum<'a, 'de, T> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<()> {
