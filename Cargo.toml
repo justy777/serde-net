@@ -6,6 +6,7 @@ description = "A network serialization library"
 keywords = ["network", "serde", "serialization"]
 categories = ["encoding"]
 edition = "2021"
+rust-version = "1.56"
 
 [dependencies]
 byteorder = "1.4"
