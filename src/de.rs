@@ -292,12 +292,8 @@ impl<'a, 'de, T: AsRef<[u8]>> LengthDefined<'a, 'de, T> {
             index: 0,
         }
     }
-}
 
-impl<'a, 'de, T: AsRef<[u8]>> de::SeqAccess<'de> for LengthDefined<'a, 'de, T> {
-    type Error = Error;
-
-    fn next_element_seed<U>(&mut self, seed: U) -> Result<Option<U::Value>>
+    fn next_seed<U>(&mut self, seed: U) -> Result<Option<U::Value>>
     where
         U: DeserializeSeed<'de>,
     {
@@ -310,6 +306,17 @@ impl<'a, 'de, T: AsRef<[u8]>> de::SeqAccess<'de> for LengthDefined<'a, 'de, T> {
     }
 }
 
+impl<'a, 'de, T: AsRef<[u8]>> de::SeqAccess<'de> for LengthDefined<'a, 'de, T> {
+    type Error = Error;
+
+    fn next_element_seed<U>(&mut self, seed: U) -> Result<Option<U::Value>>
+    where
+        U: DeserializeSeed<'de>,
+    {
+        self.next_seed::<U>(seed)
+    }
+}
+
 impl<'de, 'a, T: AsRef<[u8]>> de::MapAccess<'de> for LengthDefined<'a, 'de, T> {
     type Error = Error;
 
@@ -317,12 +324,7 @@ impl<'de, 'a, T: AsRef<[u8]>> de::MapAccess<'de> for LengthDefined<'a, 'de, T> {
     where
         K: DeserializeSeed<'de>,
     {
-        if self.index < self.length {
-            self.index += 1;
-            seed.deserialize(&mut *self.de).map(Some)
-        } else {
-            Ok(None)
-        }
+        self.next_seed::<K>(seed)
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value>

@@ -169,31 +169,18 @@ impl ser::Serializer for &mut Serializer {
         Ok(self)
     }
 
-    #[allow(clippy::cast_possible_truncation)]
     fn serialize_tuple_variant(
         self,
-        _name: &'static str,
+        name: &'static str,
         variant_index: u32,
-        _variant: &'static str,
-        _len: usize,
+        variant: &'static str,
+        len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        self.output
-            .write_u8(variant_index as u8)
-            .map_err(Error::io)?;
-        Ok(self)
+        self.serialize_struct_variant(name, variant_index, variant, len)
     }
 
-    #[allow(clippy::cast_possible_truncation)]
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap> {
-        match len {
-            Some(len) => {
-                self.output
-                    .write_u16::<NetworkEndian>(len as u16)
-                    .map_err(Error::io)?;
-                Ok(self)
-            }
-            None => Err(Error::LengthNotKnown),
-        }
+        self.serialize_seq(len)
     }
 
     fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
