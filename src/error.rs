@@ -11,6 +11,7 @@ pub enum Error {
     Io(io::Error),
     LengthNotKnown,
     InvalidString,
+    InvalidChar,
 }
 
 impl Error {
@@ -44,6 +45,7 @@ impl Display for Error {
             Error::Io(ref err) => Display::fmt(err, f),
             Error::LengthNotKnown => f.write_str("length not known"),
             Error::InvalidString => f.write_str("invalid string"),
+            Error::InvalidChar => f.write_str("invalid char"),
         }
     }
 }

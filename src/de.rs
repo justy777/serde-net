@@ -24,8 +24,7 @@ where
     U: Deserialize<'a>,
 {
     let mut deserializer = Deserializer::from_reader(input);
-    let u = U::deserialize(&mut deserializer)?;
-    Ok(u)
+    U::deserialize(&mut deserializer)
 }
 
 impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de, T> {
@@ -130,7 +129,9 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
     where
         V: Visitor<'de>,
     {
-        todo!()
+        let value = self.input.read_u32::<NetworkEndian>().map_err(Error::io)?;
+        let c = char::from_u32(value).ok_or(Error::InvalidChar)?;
+        visitor.visit_char(c)
     }
 
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
@@ -161,11 +162,11 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
         visitor.visit_bytes(&bytes)
     }
 
-    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        todo!()
+        unimplemented!()
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
@@ -180,18 +181,18 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
         }
     }
 
-    fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        unimplemented!()
+        visitor.visit_unit()
     }
 
-    fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        unimplemented!()
+        visitor.visit_unit()
     }
 
     fn deserialize_newtype_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
@@ -206,8 +207,7 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
         V: Visitor<'de>,
     {
         let length = self.input.read_u16::<NetworkEndian>().map_err(Error::io)?;
-        let value = visitor.visit_seq(LengthDefined::new(self, length))?;
-        Ok(value)
+        visitor.visit_seq(LengthDefined::new(self, length))
     }
 
     #[allow(clippy::cast_possible_truncation)]
@@ -215,8 +215,7 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
     where
         V: Visitor<'de>,
     {
-        let value = visitor.visit_seq(LengthDefined::new(self, len as u16))?;
-        Ok(value)
+        visitor.visit_seq(LengthDefined::new(self, len as u16))
     }
 
     #[allow(clippy::cast_possible_truncation)]
@@ -229,8 +228,7 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
     where
         V: Visitor<'de>,
     {
-        let value = visitor.visit_seq(LengthDefined::new(self, len as u16))?;
-        Ok(value)
+        visitor.visit_seq(LengthDefined::new(self, len as u16))
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
@@ -238,8 +236,7 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
         V: Visitor<'de>,
     {
         let length = self.input.read_u16::<NetworkEndian>().map_err(Error::io)?;
-        let value = visitor.visit_map(LengthDefined::new(self, length))?;
-        Ok(value)
+        visitor.visit_map(LengthDefined::new(self, length))
     }
 
     fn deserialize_struct<V>(
@@ -263,8 +260,7 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
     where
         V: Visitor<'de>,
     {
-        let value = visitor.visit_enum(Enum::new(self))?;
-        Ok(value)
+        visitor.visit_enum(Enum::new(self))
     }
 
     fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value>

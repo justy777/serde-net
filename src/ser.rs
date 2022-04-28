@@ -75,7 +75,7 @@ impl ser::Serializer for &mut Serializer {
     }
 
     fn serialize_char(self, v: char) -> Result<()> {
-        self.serialize_str(&v.to_string())
+        self.serialize_u32(v as u32)
     }
 
     fn serialize_str(self, v: &str) -> Result<()> {
@@ -103,11 +103,11 @@ impl ser::Serializer for &mut Serializer {
     }
 
     fn serialize_unit(self) -> Result<()> {
-        unimplemented!()
+        Ok(())
     }
 
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        unimplemented!()
+        Ok(())
     }
 
     #[allow(clippy::cast_possible_truncation)]
