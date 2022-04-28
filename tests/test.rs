@@ -1,5 +1,6 @@
-use serde::{de, ser, Serialize, Deserialize};
+use serde::{de, ser, Deserialize, Serialize};
 use serde_net::{from_reader, to_bytes};
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 fn test_roundtrip_ok<T>(value: T, output: Vec<u8>)
@@ -136,9 +137,94 @@ fn test_roundtrip_option() {
 }
 
 #[test]
+fn test_roundtrip_seq() {
+    let value: [u16; 3] = [77, 54, 13];
+    test_roundtrip_ok(value, vec![0, 77, 0, 54, 0, 13]);
+}
+
+#[test]
+fn test_roundtrip_tuple() {
+    let value: (u8, bool, char) = (63, true, 'g');
+    test_roundtrip_ok(value, vec![63, 1, 0, 0, 0, 103]);
+}
+
+#[test]
+fn test_roundtrip_map() {
+    let mut map: BTreeMap<String, u8> = BTreeMap::new();
+    map.insert(String::from("Monkey"), 7);
+    map.insert(String::from("Dog"), 3);
+
+    test_roundtrip_ok(
+        map,
+        vec![
+            0, 2, 0, 3, 68, 111, 103, 3, 0, 6, 77, 111, 110, 107, 101, 121, 7,
+        ],
+    );
+}
+
+#[test]
 fn test_roundtrip_unit_struct() {
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct Unit;
 
     test_roundtrip_ok(Unit {}, vec![]);
+}
+
+#[test]
+fn test_roundtrip_newtype_struct() {
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    struct NewType(char);
+
+    test_roundtrip_ok(NewType('a'), vec![0, 0, 0, 97]);
+}
+
+#[test]
+fn test_roundtrip_tuple_struct() {
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    struct Tuple(char, u8, bool);
+
+    test_roundtrip_ok(Tuple('$', 125, false), vec![0, 0, 0, 36, 125, 0]);
+}
+
+#[test]
+fn test_roundtrip_struct() {
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    struct Test {
+        int: u32,
+        seq: Vec<String>,
+    }
+
+    let value = Test {
+        int: 1,
+        seq: vec!["a".to_owned(), "b".to_owned()],
+    };
+    test_roundtrip_ok(value, vec![0, 0, 0, 1, 0, 2, 0, 1, 97, 0, 1, 98]);
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+enum E {
+    Unit,
+    Newtype(u32),
+    Tuple(u8, u8),
+    Struct { a: u32 },
+}
+
+#[test]
+fn test_roundtrip_unit_variant() {
+    test_roundtrip_ok(E::Unit, vec![0]);
+}
+
+#[test]
+fn test_roundtrip_newtype_variant() {
+    test_roundtrip_ok(E::Newtype(1), vec![1, 0, 0, 0, 1]);
+}
+
+#[test]
+fn test_roundtrip_tuple_variant() {
+    test_roundtrip_ok(E::Tuple(1, 2), vec![2, 1, 2]);
+}
+
+#[test]
+fn test_roundtrip_struct_variant() {
+    test_roundtrip_ok(E::Struct { a: 1 }, vec![3, 0, 0, 0, 1]);
 }
