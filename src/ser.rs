@@ -5,12 +5,22 @@ use serde::{ser, Serialize};
 
 use crate::error::{Error, Result};
 
-pub struct Serializer {
-    output: Vec<u8>,
+pub struct Serializer<W: Write> {
+    output: W,
 }
 
 /// # Errors
-pub fn to_bytes<T>(value: &T) -> Result<Vec<u8>>
+pub fn to_writer<W, T>(writer: W, value: &T) -> Result<()>
+where
+    W: Write,
+    T: ?Sized + Serialize,
+{
+    let mut serializer = Serializer { output: writer };
+    value.serialize(&mut serializer)
+}
+
+/// # Errors
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
 {
@@ -19,7 +29,7 @@ where
     Ok(serializer.output)
 }
 
-impl ser::Serializer for &mut Serializer {
+impl<W: Write> ser::Serializer for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
     type SerializeSeq = Self;
@@ -202,7 +212,7 @@ impl ser::Serializer for &mut Serializer {
     }
 }
 
-impl ser::SerializeSeq for &mut Serializer {
+impl<W: Write> ser::SerializeSeq for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 
@@ -218,7 +228,7 @@ impl ser::SerializeSeq for &mut Serializer {
     }
 }
 
-impl ser::SerializeTuple for &mut Serializer {
+impl<W: Write> ser::SerializeTuple for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 
@@ -234,7 +244,7 @@ impl ser::SerializeTuple for &mut Serializer {
     }
 }
 
-impl ser::SerializeTupleStruct for &mut Serializer {
+impl<W: Write> ser::SerializeTupleStruct for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 
@@ -250,7 +260,7 @@ impl ser::SerializeTupleStruct for &mut Serializer {
     }
 }
 
-impl ser::SerializeTupleVariant for &mut Serializer {
+impl<W: Write> ser::SerializeTupleVariant for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 
@@ -266,7 +276,7 @@ impl ser::SerializeTupleVariant for &mut Serializer {
     }
 }
 
-impl ser::SerializeMap for &mut Serializer {
+impl<W: Write> ser::SerializeMap for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 
@@ -289,7 +299,7 @@ impl ser::SerializeMap for &mut Serializer {
     }
 }
 
-impl ser::SerializeStruct for &mut Serializer {
+impl<W: Write> ser::SerializeStruct for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 
@@ -305,7 +315,7 @@ impl ser::SerializeStruct for &mut Serializer {
     }
 }
 
-impl ser::SerializeStructVariant for &mut Serializer {
+impl<W: Write> ser::SerializeStructVariant for &mut Serializer<W> {
     type Ok = ();
     type Error = Error;
 

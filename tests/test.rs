@@ -1,5 +1,5 @@
 use serde::{de, ser, Deserialize, Serialize};
-use serde_net::{from_bytes, to_bytes};
+use serde_net::{from_bytes, to_vec};
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
@@ -7,7 +7,7 @@ fn test_roundtrip_ok<T>(value: T, output: Vec<u8>)
 where
     T: PartialEq + Debug + ser::Serialize + de::DeserializeOwned,
 {
-    let mut bytes = to_bytes(&value).unwrap();
+    let mut bytes = to_vec(&value).unwrap();
     assert_eq!(bytes, output);
 
     let v: T = from_bytes(&mut bytes).unwrap();
