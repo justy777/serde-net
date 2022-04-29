@@ -1,33 +1,48 @@
 use std::io::{Cursor, Read};
 
 use byteorder::{NetworkEndian, ReadBytesExt};
-use serde::de::{self, DeserializeSeed, IntoDeserializer, Visitor};
-use serde::Deserialize;
+use serde::de::{self, DeserializeOwned, DeserializeSeed, IntoDeserializer, Visitor};
 
 use crate::error::{Error, Result};
 
-pub struct Deserializer<'de, T: AsRef<[u8]>> {
-    input: Cursor<&'de mut T>,
+pub struct Deserializer<R: Read> {
+    input: R,
 }
 
-impl<'de, T: AsRef<[u8]>> Deserializer<'de, T> {
-    pub fn from_bytes(input: &'de mut T) -> Self {
+impl<R: Read> Deserializer<R> {
+    pub fn from_reader(input: R) -> Self {
+        Deserializer { input }
+    }
+}
+
+impl<T: AsRef<[u8]>> Deserializer<Cursor<T>> {
+    pub fn from_bytes(input: T) -> Self {
         let cursor = Cursor::new(input);
         Deserializer { input: cursor }
     }
 }
 
 /// # Errors
-pub fn from_bytes<'a, T, D>(input: &'a mut T) -> Result<D>
+pub fn from_reader<R, D>(input: R) -> Result<D>
+where
+    R: Read,
+    D: DeserializeOwned,
+{
+    let mut deserialized = Deserializer::from_reader(input);
+    D::deserialize(&mut deserialized)
+}
+
+/// # Errors
+pub fn from_bytes<T, D>(input: &mut T) -> Result<D>
 where
     T: AsRef<[u8]>,
-    D: Deserialize<'a>,
+    D: DeserializeOwned,
 {
     let mut deserializer = Deserializer::from_bytes(input);
     D::deserialize(&mut deserializer)
 }
 
-impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de, T> {
+impl<'de, R: Read> de::Deserializer<'de> for &mut Deserializer<R> {
     type Error = Error;
 
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value>
@@ -278,14 +293,14 @@ impl<'de, 'a, T: AsRef<[u8]>> de::Deserializer<'de> for &'a mut Deserializer<'de
     }
 }
 
-struct LengthDefined<'a, 'de: 'a, T: AsRef<[u8]>> {
-    de: &'a mut Deserializer<'de, T>,
+struct LengthDefined<'a, R: Read> {
+    de: &'a mut Deserializer<R>,
     length: u16,
     index: u16,
 }
 
-impl<'de, 'a, T: AsRef<[u8]>> LengthDefined<'a, 'de, T> {
-    fn new(de: &'a mut Deserializer<'de, T>, length: u16) -> Self {
+impl<'de, 'a, R: Read> LengthDefined<'a, R> {
+    fn new(de: &'a mut Deserializer<R>, length: u16) -> Self {
         LengthDefined {
             de,
             length,
@@ -293,9 +308,9 @@ impl<'de, 'a, T: AsRef<[u8]>> LengthDefined<'a, 'de, T> {
         }
     }
 
-    fn next_seed<U>(&mut self, seed: U) -> Result<Option<U::Value>>
+    fn next_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
     where
-        U: DeserializeSeed<'de>,
+        T: DeserializeSeed<'de>,
     {
         if self.index < self.length {
             self.index += 1;
@@ -306,18 +321,18 @@ impl<'de, 'a, T: AsRef<[u8]>> LengthDefined<'a, 'de, T> {
     }
 }
 
-impl<'de, 'a, T: AsRef<[u8]>> de::SeqAccess<'de> for LengthDefined<'a, 'de, T> {
+impl<'de, 'a, R: Read> de::SeqAccess<'de> for LengthDefined<'a, R> {
     type Error = Error;
 
-    fn next_element_seed<U>(&mut self, seed: U) -> Result<Option<U::Value>>
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
     where
-        U: DeserializeSeed<'de>,
+        T: DeserializeSeed<'de>,
     {
-        self.next_seed::<U>(seed)
+        self.next_seed::<T>(seed)
     }
 }
 
-impl<'de, 'a, T: AsRef<[u8]>> de::MapAccess<'de> for LengthDefined<'a, 'de, T> {
+impl<'de, 'a, R: Read> de::MapAccess<'de> for LengthDefined<'a, R> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
@@ -335,17 +350,17 @@ impl<'de, 'a, T: AsRef<[u8]>> de::MapAccess<'de> for LengthDefined<'a, 'de, T> {
     }
 }
 
-struct Enum<'a, 'de: 'a, T: AsRef<[u8]>> {
-    de: &'a mut Deserializer<'de, T>,
+struct Enum<'a, R: Read> {
+    de: &'a mut Deserializer<R>,
 }
 
-impl<'de, 'a, T: AsRef<[u8]>> Enum<'a, 'de, T> {
-    fn new(de: &'a mut Deserializer<'de, T>) -> Self {
+impl<'a, R: Read> Enum<'a, R> {
+    fn new(de: &'a mut Deserializer<R>) -> Self {
         Enum { de }
     }
 }
 
-impl<'de, 'a, T: AsRef<[u8]>> de::EnumAccess<'de> for Enum<'a, 'de, T> {
+impl<'de, 'a, R: Read> de::EnumAccess<'de> for Enum<'a, R> {
     type Error = Error;
     type Variant = Self;
 
@@ -359,16 +374,16 @@ impl<'de, 'a, T: AsRef<[u8]>> de::EnumAccess<'de> for Enum<'a, 'de, T> {
     }
 }
 
-impl<'de, 'a, T: AsRef<[u8]>> de::VariantAccess<'de> for Enum<'a, 'de, T> {
+impl<'de, 'a, R: Read> de::VariantAccess<'de> for Enum<'a, R> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<()> {
         Ok(())
     }
 
-    fn newtype_variant_seed<U>(self, seed: U) -> Result<U::Value>
+    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value>
     where
-        U: DeserializeSeed<'de>,
+        T: DeserializeSeed<'de>,
     {
         seed.deserialize(self.de)
     }
