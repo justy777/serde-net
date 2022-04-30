@@ -1,5 +1,5 @@
 [package]
-name = "serde-net"
+name = "serde_net"
 version = "0.1.0"
 license = "MIT"
 description = "A network serialization library"
