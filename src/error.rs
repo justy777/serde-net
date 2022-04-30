@@ -12,11 +12,17 @@ pub enum Error {
     LengthNotKnown,
     InvalidString,
     InvalidChar,
+    TrailingBytes,
+    EofWhileDeserializing,
 }
 
 impl Error {
-    pub(crate) const fn io(err: io::Error) -> Self {
-        Error::Io(err)
+    pub(crate) fn io(err: io::Error) -> Self {
+        if err.kind() == io::ErrorKind::UnexpectedEof {
+            Error::EofWhileDeserializing
+        } else {
+            Error::Io(err)
+        }
     }
 }
 
@@ -46,6 +52,8 @@ impl Display for Error {
             Error::LengthNotKnown => f.write_str("length not known"),
             Error::InvalidString => f.write_str("invalid string"),
             Error::InvalidChar => f.write_str("invalid char"),
+            Error::TrailingBytes => f.write_str("trailing bytes"),
+            Error::EofWhileDeserializing => f.write_str("EOF while deserializing"),
         }
     }
 }

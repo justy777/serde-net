@@ -1,6 +1,6 @@
 use serde::{de, ser, Deserialize, Serialize};
 use serde_bytes::{ByteBuf, Bytes};
-use serde_net::{from_bytes, to_vec};
+use serde_net::{from_bytes, to_vec, Error};
 use std::collections::BTreeMap;
 use std::ffi::CString;
 use std::fmt::Debug;
@@ -246,4 +246,44 @@ fn test_serialize_bytes() {
     let mut bytes = Bytes::new(b"Hello");
     let result = to_vec(&mut bytes).unwrap();
     assert_eq!(result, vec![0, 5, 72, 101, 108, 108, 111]);
+}
+
+#[test]
+fn test_deserialize_string_trailing_bytes() {
+    let mut value = vec![0, 2, 72, 101, 108];
+    let result: Result<String, Error> = from_bytes(&mut value);
+    match result {
+        Err(Error::TrailingBytes) => {}
+        _ => assert!(false),
+    }
+}
+
+#[test]
+fn test_deserialize_map_trailing_bytes() {
+    let mut value = vec![0, 2, 72, 101, 108, 77, 67];
+    let result: Result<BTreeMap<u8, u8>, Error> = from_bytes(&mut value);
+    match result {
+        Err(Error::TrailingBytes) => {}
+        _ => assert!(false),
+    }
+}
+
+#[test]
+fn test_deserialize_string_eof_while_deserializing() {
+    let mut value = vec![0, 4, 72, 101, 108];
+    let result: Result<String, Error> = from_bytes(&mut value);
+    match result {
+        Err(Error::EofWhileDeserializing) => {}
+        _ => assert!(false),
+    }
+}
+
+#[test]
+fn test_deserialize_map_eof_while_deserializing() {
+    let mut value = vec![0, 3, 72, 101, 108, 77, 67];
+    let result: Result<BTreeMap<u8, u8>, Error> = from_bytes(&mut value);
+    match result {
+        Err(Error::EofWhileDeserializing) => {}
+        _ => assert!(false),
+    }
 }

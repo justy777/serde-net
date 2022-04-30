@@ -10,6 +10,16 @@ pub struct Deserializer<R: Read> {
 }
 
 impl<R: Read> Deserializer<R> {
+    fn end(&mut self) -> Result<()> {
+        let mut buf = [0; 1];
+        let read_bytes = self.input.read(&mut buf).map_err(Error::io)?;
+        if read_bytes > 0 {
+            Err(Error::TrailingBytes)
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn from_reader(input: R) -> Self {
         Deserializer { input }
     }
@@ -29,7 +39,9 @@ where
     D: DeserializeOwned,
 {
     let mut deserialized = Deserializer::from_reader(input);
-    D::deserialize(&mut deserialized)
+    let value = D::deserialize(&mut deserialized)?;
+    deserialized.end()?;
+    Ok(value)
 }
 
 /// # Errors
@@ -39,7 +51,9 @@ where
     D: DeserializeOwned,
 {
     let mut deserializer = Deserializer::from_bytes(input);
-    D::deserialize(&mut deserializer)
+    let value = D::deserialize(&mut deserializer)?;
+    deserializer.end()?;
+    Ok(value)
 }
 
 impl<'de, R: Read> de::Deserializer<'de> for &mut Deserializer<R> {
