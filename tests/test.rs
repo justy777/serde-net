@@ -1,6 +1,8 @@
 use serde::{de, ser, Deserialize, Serialize};
+use serde_bytes::{ByteBuf, Bytes};
 use serde_net::{from_bytes, to_vec};
 use std::collections::BTreeMap;
+use std::ffi::CString;
 use std::fmt::Debug;
 
 fn test_roundtrip_ok<T>(value: T, output: Vec<u8>)
@@ -227,4 +229,21 @@ fn test_roundtrip_tuple_variant() {
 #[test]
 fn test_roundtrip_struct_variant() {
     test_roundtrip_ok(E::Struct { a: 1 }, vec![3, 0, 0, 0, 1]);
+}
+
+#[test]
+fn test_deserialize_byte_buf() {
+    let mut input = vec![0, 2, 97, 98];
+    let byte_buf: ByteBuf = from_bytes(&mut input).unwrap();
+    assert_eq!(vec![97, 98], byte_buf.into_vec());
+
+    let cstring: CString = from_bytes(&mut input).unwrap();
+    assert_eq!("ab", cstring.into_string().unwrap());
+}
+
+#[test]
+fn test_serialize_bytes() {
+    let mut bytes = Bytes::new(b"Hello");
+    let result = to_vec(&mut bytes).unwrap();
+    assert_eq!(result, vec![0, 5, 72, 101, 108, 108, 111]);
 }

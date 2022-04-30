@@ -149,7 +149,14 @@ impl<'de, R: Read> de::Deserializer<'de> for &mut Deserializer<R> {
         visitor.visit_char(c)
     }
 
-    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_str<V>(self, _visitor: V) -> Result<V::Value>
+    where
+        V: Visitor<'de>,
+    {
+        unimplemented!()
+    }
+
+    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -160,28 +167,21 @@ impl<'de, R: Read> de::Deserializer<'de> for &mut Deserializer<R> {
         visitor.visit_string(s)
     }
 
-    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_str(visitor)
-    }
-
-    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        let length = self.input.read_u16::<NetworkEndian>().map_err(Error::io)?;
-        let mut bytes = Vec::with_capacity(length as usize);
-        self.input.read_exact(&mut bytes).map_err(Error::io)?;
-        visitor.visit_bytes(&bytes)
-    }
-
-    fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value>
+    fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
+    }
+
+    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
+    where
+        V: Visitor<'de>,
+    {
+        let length = self.input.read_u16::<NetworkEndian>().map_err(Error::io)?;
+        let mut bytes = vec![0; length as usize];
+        self.input.read_exact(&mut bytes).map_err(Error::io)?;
+        visitor.visit_bytes(&bytes)
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
