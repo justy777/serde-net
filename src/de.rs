@@ -20,7 +20,7 @@ impl<R: Read> Deserializer<R> {
         }
     }
 
-    pub fn from_reader(input: R) -> Self {
+    pub const fn from_reader(input: R) -> Self {
         Deserializer { input }
     }
 }
